@@ -1,205 +1,83 @@
 import 'package:flutter/material.dart';
-import 'package:english_words/english_words.dart';
-import 'package:flutter/rendering.dart';
-import 'package:provider/provider.dart';
+import 'package:cadastros_contatos/database/database_helper%20subs.dart';
+import 'package:flutter_application_1/database_helper.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
+void main() => runApp(const MyApp());
 class MyApp extends StatelessWidget { //caracteristicas que nao mudam
-  const MyApp({super.key});
-  
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider( 
-      create: (context) => MyAppState(),
-        child: MaterialApp(
-        title: 'Namer App',
+    return MaterialApp( 
+        title: 'SQFlite Demo',
         theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Color.fromARGB(255, 205, 25, 25)),
-          
+          primarySwatch: Colors.teal,
         ),
         home: MyHomePage(),
       ),
     );
   }
 }
-
-class MyAppState extends ChangeNotifier{
-  var current = WordPair.random();
-
-  void getNext(){
-    current = WordPair.random();
-    notifyListeners();
-  }
-
-  var favorites = <WordPair>[];
-
-  void toggleFavorite() {
-    if (favorites.contains(current)) {
-      favorites.remove(current);
-    } else {
-      favorites.add(current);
-    }
-    notifyListeners();
-  }
-}
-
-class MyHomePage extends StatefulWidget{
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  var selectedIndex = 0;
+class MyHomePage extends StatelessWidget {
+  final dbHelper = DatabaseHelper.instance;
   @override
   Widget build(BuildContext context){
-    Widget page;
-    switch(selectedIndex){
-      case 0:
-        page = GeneratorPage();
-        break;
-      case 1:
-        page = FavoritePage();
-        break;
-      default:
-        throw UnimplementedError('no widget for $selectedIndex');
-    }
-
-    return LayoutBuilder(
-      builder: (context,constraints) {
-        return Scaffold(
-          body: Row(
-            children: [
-              SafeArea(
-                child: NavigationRail(
-                  extended: constraints.maxWidth >= 600,
-                  destinations: [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.home),
-                      label: Text('Home'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.favorite),
-                      label: Text('Favorites'),
-                    ),
-                  ],
-                  selectedIndex: selectedIndex,
-                  onDestinationSelected: (value){
-                    setState(() {
-                      selectedIndex=value;
-                    });
-                  },
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: page,
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-    );
-  }
-}
-
-class GeneratorPage extends StatelessWidget{
-  @override
-  Widget build(BuildContext context){
-    var appState = context.watch<MyAppState>();
-    var pair = appState.current;
-
-    IconData icon;
-    if (appState.favorites.contains(pair)) {
-      icon = Icons.favorite;
-    }else{
-      icon = Icons.favorite_border;
-    }
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          BigCard(pair: pair),
-          SizedBox(height: 10),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  appState.toggleFavorite();
-                },
-                icon: Icon(icon),
-                label: Text('Like'),
-              ),
-              SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () {
-                  appState.getNext();
-                },
-                child: Text('Next'),
-              )
-            ],
-          )
-        ],
+    return Scaffold(
+      appBar: AppBar(
+        title: text('Exemplo de CRUD basico'),
       ),
-    );
-  }
-}
-
-class BigCard extends StatelessWidget {
-  const BigCard({
-    super.key,
-    required this.pair,
-  });
-
-  final WordPair pair;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = theme.textTheme.displayMedium!.
-      copyWith(color: theme.colorScheme.onPrimary);
-
-    return Center(
-      child: Card(
-        color: theme.colorScheme.primary,
-        child: Padding( //para dar espaço la de cima
-          padding: const EdgeInsets.all(20.0),
-          child: Text(pair.asPascalCase, style: style,semanticsLabel: "${pair.first} ${pair.second}",), //ativar leitura do campo
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            ElevatedButton(
+              child: Text('Inserir dados', style: TextStyle(fontSize: 20),),
+              onPressed: () {_inserir();},
+            )
+            ElevatedButton(
+              child: Text('Consultar dados', style: TextStyle(fontSize: 20),),
+              onPressed: () {_consultar();},
+            )
+            ElevatedButton(
+              child: Text('Atualizar dados', style: TextStyle(fontSize: 20),),
+              onPressed: () {_atualizar();},
+            )
+            ElevatedButton(
+              child: Text('Deletar dados', style: TextStyle(fontSize: 20),),
+              onPressed: () {_deletar();},
+            ),
+          ],
         ),
       ),
     );
   }
+
+  void _inserir() async{
+    Map<String, dynamic> row = {
+      DatabaseHelper.columnNome: 'Joao inserir',
+      DatabaseHelper.columnIdade: 40
+    };
+    final id = await dbHelper.insert(row);
+    print('linha inserida id: $id');
+  }
+
+  void _consultar() async {
+    final todasLinhas = await dbHelper.queryAllRows();
+    print('Consulta todas as linhas:');
+    todasLinhas.forEach((row) => print(row));
+  }
+
+  void _atualizar() async {
+    Map<String, dynamic> row = {
+      DatabaseHelper.columnId : 1,
+      DatabaseHelper.columnNome : 'Maria atualizar',
+      DatabaseHelper.columnIdade : 32
+    };
+    final linhasAfetas = await dbHelper.update(row);
+    print('atualizados $linhasAfetas linha(s)');
+  }
+  void _deletar() async{
+    final id = await dbHelper.queryRowCount();
+    final linhaDeletada = away dbHelper.delete(id!);
+    print('Deletada(s) $linhaDeletada linha(s): linha $id');
+  }
 }
 
-class FavoritePage extends StatelessWidget{
-  @override
-  Widget build(BuildContext context){
-
-    var appState = context.watch<MyAppState>();
-    if (appState.favorites.isEmpty){
-      return Center(child: Text('no favorites yet'),
-      );
-    }
-
-    return ListView(
-      children: [
-        Padding(
-          padding:const EdgeInsets.all(20),
-          child: Text('you have ${appState.favorites.length} favorites: '),
-          ),
-          for(var pair in appState.favorites)
-          ListTile(
-            leading: Icon(Icons.favorite),
-            title: Text(pair.asLowerCase),
-          ),
-      ],
-    );
-  } // build
-} // classe
